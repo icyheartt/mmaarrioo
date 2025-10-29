@@ -26,6 +26,9 @@ public class GameWorld {
 
     // === 구성 요소 ===
     private GameCharacter player;
+    private int swimHoldDir = 0; // -1: 아래, 0: 없음, 1: 위
+    private static final float SWIM_HOLD_SPEED = 120f;
+    private static final float MAX_SWIM_VY     = 220f;
     private Array<Block> blocks;
     private Array<CoinObject> coins;
     private Array<Pipe> pipes;
@@ -91,6 +94,19 @@ public class GameWorld {
         }
 
         // 2) 물리(가속/중력/드래그/적분)
+        // 수중 상/하 홀드 입력값 저장
+        if (levelType == LevelType.UNDERWATER) {
+            if (input.up && !input.down) {
+                swimHoldDir = 1;
+            } else if (input.down && !input.up) {
+                swimHoldDir = -1;
+            } else {
+                swimHoldDir = 0;
+            }
+        } else {
+            swimHoldDir = 0;
+        }
+
         applyPhysics(delta);
 
         // 3) 블록 충돌
@@ -138,6 +154,15 @@ public class GameWorld {
                 player.velocity.y += player.swimThrust * delta;
             }
         }
+        // 수중 상/하 홀드 이동 (UP/DOWN 키를 누르고 있는 동안)
+        if (levelType == LevelType.UNDERWATER) {
+            if (swimHoldDir == 1) {
+                player.velocity.y = SWIM_HOLD_SPEED;
+            } else if (swimHoldDir == -1) {
+                player.velocity.y = -SWIM_HOLD_SPEED;
+            }
+        }
+
 
         // --- 중력/수중 드래그 ---
         float gravity = WORLD_GRAVITY * (levelType == LevelType.UNDERWATER ? WATER_GRAVITY_SCALE : 1f);
