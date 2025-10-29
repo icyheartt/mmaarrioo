@@ -18,7 +18,7 @@ public class GameWorld {
 
     // === 월드 상수 ===
     public static final float WORLD_GRAVITY = -9.8f * 200f; // px/s^2
-    public static final float FLOOR_LEVEL   = 0f;
+    public static final float FLOOR_LEVEL = 0f;
 
     // === 수중 보정 상수 ===
     private static final float WATER_GRAVITY_SCALE = 0.35f; // 중력 약화
@@ -111,6 +111,12 @@ public class GameWorld {
 
         // 3) 블록 충돌
         resolveBlockCollision();
+
+        //죽음 체크
+        if (player.position.y <= FLOOR_LEVEL) {
+            player.kill();
+            player.respawnAtStart();
+        }
 
         // 4) 파이프(레벨 전환)
         handlePipeEnter(input);
@@ -252,11 +258,11 @@ public class GameWorld {
         for (Pipe pipe : pipes) {
             if (!pr.overlaps(pipe.getBounds())) continue;
 
-            if (pipe.getOrientation() == Pipe.Orientation.DOWN && input.down) {
+            if (pipe.getOrientation() == Pipe.Orientation.DOWN && input.up) {
                 goNextLevel(); // 1 -> 2
                 return;
             }
-            if (pipe.getOrientation() == Pipe.Orientation.UP && input.up) {
+            if (pipe.getOrientation() == Pipe.Orientation.UP && input.down) {
                 goNextLevel(); // 2 -> 3
                 return;
             }

@@ -2,6 +2,7 @@ package io.jbnu.test;
 
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
 public class GameCharacter {
@@ -35,11 +36,16 @@ public class GameCharacter {
     public Anim anim = Anim.IDLE;
     public boolean facingLeft = false;
     public final Sprite sprite;
+    private boolean isDead;
+    private float startX, startY;
 
     public GameCharacter(Vector2 startPos, Texture texture) {
         this.position.set(startPos);
         this.sprite = new Sprite(texture);
         syncSpriteToPosition();
+        this.isDead = false;
+        startX = startPos.x;
+        startY = startPos.y;
     }
 
     // === 의도 입력 메서드 (이동만 담당) ===
@@ -74,6 +80,25 @@ public class GameCharacter {
     public float getSwimSpeed()    { return swimSpeed; }
     public float getWaterDrag()    { return waterDrag; }
     public float getMaxSwimVy()    { return maxSwimVy; }
+    public Rectangle getBounds() {
+        Rectangle bound = new Rectangle(position.x, position.y, sprite.getWidth(), sprite.getHeight());
+        return bound;
+    }
+
+    public void kill() {
+        isDead = true;
+        // 죽는 애니메이션 등 추가 가능
+    }
+
+    public void respawnAtStart() {
+        this.position.set(startX, startY);
+        this.isDead = false;
+    }
+
+    public void setStartPosition(float x, float y) {
+        this.startX = x;
+        this.startY = y;
+    }
 
     // === 스프라이트 위치 동기화 ===
     public void syncSpriteToPosition() {
