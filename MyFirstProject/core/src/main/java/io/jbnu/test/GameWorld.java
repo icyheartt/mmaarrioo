@@ -1,5 +1,8 @@
 package io.jbnu.test;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
@@ -19,7 +22,10 @@ public class GameWorld {
     // === 월드 상수 ===
     public static final float WORLD_GRAVITY = -9.8f * 200f; // px/s^2
     public static final float FLOOR_LEVEL = 0f;
-
+    // 전환/효과
+    private final TransitionEffect transition = new TransitionEffect(0.35f, 0.35f);
+    private Texture overlayTex; // 1x1 화이트
+    private Sound sfxPipe, sfxFlag;
     // === 수중 보정 상수 ===
     private static final float WATER_GRAVITY_SCALE = 0.35f; // 중력 약화
     private static final float WATER_DRAG          = 4.0f;  // 속도 감쇠
@@ -46,6 +52,9 @@ public class GameWorld {
     public GameWorld(Texture initialTexture) {
         this.playerTexture = initialTexture;
         loadLevel(level);
+
+        sfxPipe = Gdx.audio.newSound(Gdx.files.internal("pipe.wav"));
+        sfxFlag = Gdx.audio.newSound(Gdx.files.internal("flag.wav"));
     }
 
     // ---------------------------
@@ -130,6 +139,8 @@ public class GameWorld {
         updateAnimationState();
 
         player.syncSpriteToPosition();
+
+        transition.update(delta);
     }
 
     // ---------------------------
@@ -310,6 +321,31 @@ public class GameWorld {
             player.getWidth(),
             player.getHeight()
         );
+    }
+
+    public void startPipeDownTransition(Runnable onMidpoint) {
+        if (transition.isActive()) return;
+        if (sfxPipe != null) sfxPipe.play(0.7f);
+        transition.start(onMidpoint);
+    }
+
+    public void startPipeUpTransition(Runnable onMidpoint) {
+        if (transition.isActive()) return;
+        if (sfxPipe != null) sfxPipe.play(0.7f);
+        transition.start(onMidpoint);
+    }
+
+    public void startFlagClearTransition(Runnable onMidpoint) {
+        if (transition.isActive()) return;
+        if (sfxFlag != null) sfxFlag.play(0.8f);
+        transition.start(onMidpoint);
+    }
+
+    public float getTransitionAlpha() { return transition.getAlpha(); }
+
+    public void disposeFadeSfx() {
+        if (sfxPipe != null) sfxPipe.dispose();
+        if (sfxFlag != null) sfxFlag.dispose();
     }
 
     // === 외부 접근자 ===

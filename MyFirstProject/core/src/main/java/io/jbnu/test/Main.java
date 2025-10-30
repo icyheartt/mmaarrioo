@@ -3,7 +3,6 @@ package io.jbnu.test;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
-import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
@@ -19,7 +18,7 @@ public class Main extends ApplicationAdapter {
     private OrthographicCamera camera;
     private Viewport viewport;
     private BitmapFont font;
-
+    private Texture fadeOverlay; // 1x1 black
     private GameWorld world;
     private final InputState input = new InputState();
 
@@ -56,6 +55,11 @@ public class Main extends ApplicationAdapter {
 
         world = new GameWorld(initial);
 
+        Pixmap pm = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        pm.setColor(0,0,0,1);
+        pm.fill();
+        fadeOverlay = new Texture(pm);
+        pm.dispose();
     }
 
     @Override
@@ -121,6 +125,13 @@ public class Main extends ApplicationAdapter {
             font.draw(batch, "[PAUSED] Press P to Resume",
                 camera.position.x - 120, camera.position.y + VIRTUAL_HEIGHT * 0.35f);
 
+        float a = world.getTransitionAlpha();
+        if (a > 0f && fadeOverlay != null) {
+            batch.setColor(1f, 1f, 1f, a);
+            batch.draw(fadeOverlay, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+            batch.setColor(1f, 1f, 1f, 1f);
+        }
+
         batch.end();
 
         input.jump = false;
@@ -165,6 +176,8 @@ public class Main extends ApplicationAdapter {
     public void dispose() {
         batch.dispose();
         font.dispose();
+        if (fadeOverlay != null) fadeOverlay.dispose();
+        if (world != null) world.disposeFadeSfx();
     }
 
     private Animation<TextureRegion> safeLoadGif(String path) {
