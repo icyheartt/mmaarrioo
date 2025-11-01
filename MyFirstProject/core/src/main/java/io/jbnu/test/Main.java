@@ -27,7 +27,9 @@ public class Main extends ApplicationAdapter {
     private Texture fadeOverlay; // 1x1 black
     private GameWorld world;
     private final InputState input = new InputState();
-
+    private Texture bgTex;
+    private float bgParallax = 0.4f; // 0(고정)~1(카메라와 동일). 취향껏
+    private String lastBgKey = null;
     private enum GameState { RUNNING, PAUSED }
     private GameState state = GameState.RUNNING;
     private CameraFxManager camFx;
@@ -78,12 +80,31 @@ public class Main extends ApplicationAdapter {
         initUnderwaterShader();
         initUnderwaterFbo(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
+        String key;
+        try {
+            Object lv = world.getLevel();
+            key = (lv == null) ? "level1" : (lv instanceof Number ? "level" + lv : String.valueOf(lv));
+        } catch (Exception e) { key = "level1"; }
+
+        loadBackgroundForLevel(key);
+        lastBgKey = key;
     }
 
     @Override
     public void render() {
         float delta = Gdx.graphics.getDeltaTime();
         stateTime += delta;
+        // === 레벨 변경 감지 및 배경 교체 ===
+        String keyNow = null;
+        try {
+            Object lv = world.getLevel();
+            keyNow = (lv == null) ? null : (lv instanceof Number ? "level" + lv : String.valueOf(lv));
+        } catch (Exception ignored) {}
+
+        if (keyNow != null && !keyNow.equals(lastBgKey)) {
+            loadBackgroundForLevel(keyNow);
+            lastBgKey = keyNow;
+        }
 
         // 1) 입력 수집 + 일시정지 토글
         pollInput();
@@ -122,6 +143,20 @@ public class Main extends ApplicationAdapter {
 
         // 7) 화면 클리어 & 공통 설정
         ScreenUtils.clear(0f, 0f, 0f, 1f);
+        // === 배경 ===
+        if (bgTex != null) {
+            batch.setProjectionMatrix(camera.combined);
+            batch.begin();
+            float viewW = camera.viewportWidth * camera.zoom;
+            float viewH = camera.viewportHeight * camera.zoom;
+            float scroll = camera.position.x * bgParallax;
+            float u  = scroll / bgTex.getWidth();
+            float u2 = u + (viewW / bgTex.getWidth());
+            float drawX = camera.position.x - viewW * 0.5f;
+            float drawY = camera.position.y - viewH * 0.5f;
+            batch.draw(bgTex, drawX, drawY, viewW, viewH, u, 0f, u2, 1f);
+            batch.end();
+        }
         batch.setProjectionMatrix(camera.combined);
 
         final boolean useFx = (underwater && camFx != null && camFx.isActive());
@@ -132,6 +167,8 @@ public class Main extends ApplicationAdapter {
 
             batch.setShader(null);
             batch.begin();
+
+            drawBackground(batch, camera, /*flipY=*/true);
 
             // 월드(블록/파이프/깃발)
             if (world.getBlocks() != null) for (Block b : world.getBlocks()) b.draw(batch);
@@ -177,6 +214,8 @@ public class Main extends ApplicationAdapter {
             // ===== 일반 경로 =====
             batch.setShader(null);
             batch.begin();
+
+            drawBackground(batch, camera, /*flipY=*/true);
 
             if (world.getBlocks() != null) for (Block b : world.getBlocks()) b.draw(batch);
             if (world.getPipes()  != null) for (Pipe  p : world.getPipes())  p.draw(batch);
@@ -271,6 +310,7 @@ public class Main extends ApplicationAdapter {
         if (world != null) world.disposeFadeSfx();
         if (waterFbo != null) waterFbo.dispose();
         if (waterShader != null) waterShader.dispose();
+        if (bgTex != null) { bgTex.dispose(); bgTex = null; }
     }
 
     private Animation<TextureRegion> safeLoadGif(String path) {
@@ -375,6 +415,45 @@ public class Main extends ApplicationAdapter {
         fboTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         waterRegion = new TextureRegion(fboTex);
         waterRegion.flip(false, true); // LibGDX FBO는 상하 반전되어 있음
+    }
+
+    // ------------------------------------------------------
+// Background: level → texture load & draw helpers
+// ------------------------------------------------------
+    private void loadBackgroundForLevel(String levelKey) {
+        if (bgTex != null) { bgTex.dispose(); bgTex = null; }
+        String key = (levelKey == null) ? "" : levelKey.toLowerCase();
+
+        // 고정 매핑: 1=초원, 2=물속, 3=산
+        String path;
+        if (key.contains("level2") || key.equals("2"))      path = "lev2back.png";
+        else if (key.contains("level3") || key.equals("3")) path = "lev3back.png";
+        else                                                path = "lev1back.png";
+
+        bgTex = new Texture(path);
+        bgTex.setWrap(Texture.TextureWrap.Repeat, Texture.TextureWrap.ClampToEdge);
+    }
+
+    // UV 대신 '음수 높이'로 뒤집기를 처리해서 FBO/텍스처 이중좌표 문제를 회피
+    private void drawBackground(SpriteBatch batch, OrthographicCamera camera, boolean flipY) {
+        if (bgTex == null) return;
+
+        float viewW = camera.viewportWidth * camera.zoom;
+        float viewH = camera.viewportHeight * camera.zoom;
+
+        float scroll = camera.position.x * bgParallax;
+        float u  = scroll / bgTex.getWidth();
+        float u2 = u + (viewW / bgTex.getWidth());
+
+        float drawX = camera.position.x - viewW * 0.5f;
+        float drawY = camera.position.y - viewH * 0.5f;
+
+        if (flipY) {
+            // 높이를 음수로 주고, 시작 y를 위쪽으로 한 칸 올려서 정확히 뒤집어 그린다
+            batch.draw(bgTex, drawX, drawY + viewH, viewW, -viewH, u, 0f, u2, 1f);
+        } else {
+            batch.draw(bgTex, drawX, drawY, viewW, viewH, u, 0f, u2, 1f);
+        }
     }
 
 }
