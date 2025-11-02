@@ -61,6 +61,11 @@ public class GameWorld {
     // 레벨 로딩
     // ---------------------------
     private void loadLevel(int lev) {
+        if (lev >= 4) { // level3 다음
+            System.out.println("게임 클리어! 종료합니다.");
+            Gdx.app.exit(); // 게임 종료
+            return;
+        }
         currentMap = new Map(lev);
 
         blocks = currentMap.getBlocks();

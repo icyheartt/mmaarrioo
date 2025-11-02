@@ -17,7 +17,7 @@ public class Flag {
         xPos = x;
         yPos = y;
         width = 50;
-        height = 50;
+        height = 200;
         this.sprite = new Sprite(flagTexture);
         this.sprite.setPosition(xPos, yPos);
         this.sprite.setSize(width, height);
